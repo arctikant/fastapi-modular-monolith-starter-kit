@@ -1,0 +1,66 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+      - "5555:5555"
+    environment:
+      - ENVIRONMENT=${ENVIRONMENT}
+      - BACKEND_CORS_ORIGINS=${BACKEND_CORS_ORIGINS}
+      - HOST=${HOST}
+      - PORT=${PORT}
+    volumes:
+      - .:/app
+    networks:
+      - app-network
+
+  db:
+    image: postgres:16.3-alpine
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/db/init_scripts:/docker-entrypoint-initdb.d
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=app
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7.2-alpine
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis-data:/data
+    networks:
+      - app-network
+
+  queue_worker:
+    build: .
+    volumes:
+      - .:/app
+    command: taskiq worker app.core.services.queue.providers.taskiq.setup:broker app.core.tasks
+    networks:
+      - app-network
+
+  mailhog:
+    image: mailhog/mailhog
+    ports:
+      - "1025:1025"  # SMTP port
+      - "8025:8025"  # Web UI port
+    networks:
+      - app-network
+
+
+volumes:
+  postgres_data:
+  redis-data:
+
+networks:
+  app-network:
+    driver: bridge
