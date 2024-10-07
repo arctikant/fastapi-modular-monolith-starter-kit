@@ -80,8 +80,5 @@ cython_debug/
 # Compiled Python files
 *.pyc
 
-# Virtual environment
-.venv/
-
 # Logs
 logs/

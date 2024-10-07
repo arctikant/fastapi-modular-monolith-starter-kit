@@ -572,13 +572,13 @@ Auth module implements basic authorization/authentication logic based on JWT tok
 
 **Ruff**
 
-- For linter check only: `ruff check .`
-- For linter check and fix: `ruff check --fix .`
-- For formatting: `ruff format .`
+- `ruff check .` to check without fix
+- `ruff check --fix .` to check and fix
+- `ruff format .` to format
 
 **mypy**
 
-- `mypy .`.
+- `mypy .` to check typing
 
 ### Testing
 
