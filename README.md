@@ -539,7 +539,7 @@ Auth module implements basic authorization/authentication logic based on JWT tok
 
 **Used:**
 
-- Package manager: [Poetry](https://python-poetry.org)
+- Package manager: [uv](https://docs.astral.sh/uv)
 - Development environment: [Docker](https://www.docker.com) and [Docker Compose](https://docs.docker.com/compose)
 
 > [!WARNING]

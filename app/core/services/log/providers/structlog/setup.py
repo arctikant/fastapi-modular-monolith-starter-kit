@@ -1,8 +1,13 @@
 import logging.config
+from pathlib import Path
 
 import structlog
 
 from app.core.configs import app_config
+
+# Ensure the logs directory exists
+log_dir = Path("/app/logs")
+log_dir.mkdir(parents=True, exist_ok=True)
 
 logging.config.dictConfig(
     {
