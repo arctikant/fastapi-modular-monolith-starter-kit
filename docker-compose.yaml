@@ -1,6 +1,7 @@
 services:
-  app:
+  web:
     build: .
+    image: app:latest
     ports:
       - "8000:8000"
       - "5555:5555"
@@ -11,7 +12,6 @@ services:
       - PORT=${PORT}
     volumes:
       - .:/app
-      - venv_data:/app/.venv  # This preserves the virtual environment
     networks:
       - app-network
 
@@ -40,10 +40,9 @@ services:
       - app-network
 
   queue_worker:
-    build: .
+    image: app:latest
     volumes:
       - .:/app
-      - venv_data:/app/.venv  # This preserves the virtual environment
     command: taskiq worker app.core.services.queue.providers.taskiq.setup:broker app.core.tasks
     networks:
       - app-network

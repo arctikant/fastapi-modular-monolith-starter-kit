@@ -555,6 +555,9 @@ Auth module implements basic authorization/authentication logic based on JWT tok
 **Check the app logs**
 - `docker compose logs app`
 
+**Install dependencies locally**
+- `uv sync --extra dev`
+
 **Create Alembic migrations locally**
 
 - `docker compose exec app alembic revision --autogenerate -m "create some table."`

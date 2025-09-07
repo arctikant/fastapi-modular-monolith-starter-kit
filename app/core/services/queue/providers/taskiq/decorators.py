@@ -1,3 +1,5 @@
+import functools
+
 from taskiq import AsyncBroker
 
 from app.core.services.queue.base_task import BaseTask
@@ -10,10 +12,10 @@ class TaskiqQueuedDecorator:
     def __call__(self, cls: type[BaseTask]) -> type[BaseTask]:
         instance = cls()
 
-        def task_wrapper(*args, **kwargs):
-            return instance.run(*args, **kwargs)
+        async def wrapper(*args, **kwargs):
+            return await instance.run(*args, **kwargs)
 
-        task_wrapper.__name__ = cls.get_name()
-        self._broker.register_task(func=task_wrapper, task_name=cls.get_name())
+        functools.update_wrapper(wrapper, instance.run, assigned=("__doc__",), updated=())
 
+        self._broker.register_task(func=wrapper, task_name=cls.get_name())
         return cls
