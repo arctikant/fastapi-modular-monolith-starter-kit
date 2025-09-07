@@ -22,7 +22,7 @@ class TestUsersRouter:
     # Tests
 
     async def test_user_can_get_user_by_id(self, client: AsyncClient):
-        users = await UserFactory.create_batch(3)
+        users = await UserFactory.create_batch_async(3)
         tokens = await login_user(client=client, user=users[0])
 
         response = await client.get(
@@ -76,7 +76,7 @@ class TestUsersRouter:
         assert body['code'] == ResponseStatus.NOT_FOUND_ERROR.value
 
     async def test_user_can_get_list_of_users(self, client: AsyncClient, db: AsyncSession):
-        users = await UserFactory.create_batch(5)
+        users = await UserFactory.create_batch_async(5)
         tokens = await login_user(client=client, user=users[0])
 
         await db.execute(update(User).where(User.id == users[4].id).values(status_id=UserStatus.INACTIVE.value))

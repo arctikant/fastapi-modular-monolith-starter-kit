@@ -3,7 +3,6 @@ from typing import Annotated, Literal, Self
 from pydantic import (
     AnyUrl,
     BeforeValidator,
-    PostgresDsn,
     computed_field,
     model_validator,
 )
@@ -49,7 +48,7 @@ class AppConfig(BaseConfig):
 
     @computed_field  # type: ignore[misc]
     @property
-    def postgres_url(self) -> PostgresDsn:
+    def postgres_url(self) -> MultiHostUrl:
         return MultiHostUrl.build(
             scheme='postgresql+psycopg',
             username=self.POSTGRES_USER,

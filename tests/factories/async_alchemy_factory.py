@@ -1,7 +1,14 @@
-from factory.alchemy import SQLAlchemyModelFactory
+from factory.alchemy import SQLAlchemyModelFactory, SQLAlchemyOptions
+from sqlalchemy.ext.asyncio import AsyncSession
+
+
+class AsyncSQLAlchemyOptions(SQLAlchemyOptions):
+    sqlalchemy_session: AsyncSession
 
 
 class AsyncSQLAlchemyModelFactory(SQLAlchemyModelFactory):
+    _meta: AsyncSQLAlchemyOptions
+
     class Meta:
         abstract = True
 
@@ -12,5 +19,5 @@ class AsyncSQLAlchemyModelFactory(SQLAlchemyModelFactory):
         return instance
 
     @classmethod
-    async def create_batch(cls, size: int, *args, **kwargs) -> list:
+    async def create_batch_async(cls, size: int, *args, **kwargs) -> list:
         return [await cls.create(**kwargs) for _ in range(size)]

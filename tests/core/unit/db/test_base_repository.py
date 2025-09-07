@@ -57,7 +57,7 @@ class TestBaseRepository:
 
     async def test_get_list(self, db: AsyncSession, repo: StubRepository) -> None:
         # Seed users
-        users = await UserFactory.create_batch(3)
+        users = await UserFactory.create_batch_async(3)
 
         # Check general structure
         params = ListParams(page=1, per_page=2)  # type: ignore[call-arg]
@@ -181,7 +181,7 @@ class TestBaseRepository:
         assert result.scalar_one() == 0
 
     async def test_delete_all(self, db: AsyncSession, repo: StubRepository) -> None:
-        users = await UserFactory.create_batch(3)
+        users = await UserFactory.create_batch_async(3)
         ids = [user.id for user in users]
 
         result = await db.execute(select(count()).select_from(User).where(User.id.in_(ids)))

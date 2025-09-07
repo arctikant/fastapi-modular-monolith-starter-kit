@@ -34,7 +34,7 @@ class TestUserService:
     # Tests
 
     async def test_get_list(self, db: AsyncSession, user_service: UserService) -> None:
-        await UserFactory.create_batch(3)
+        await UserFactory.create_batch_async(3)
         retrieved: PaginatedResult[User] = await user_service.get_list(params=ListParams())  # type: ignore[call-arg]
 
         assert isinstance(retrieved, PaginatedResult)
@@ -42,14 +42,14 @@ class TestUserService:
         assert retrieved.items and len(retrieved.items) > 1
 
     async def test_get(self, db: AsyncSession, user_service: UserService) -> None:
-        users = await UserFactory.create_batch(3)
+        users = await UserFactory.create_batch_async(3)
         retrieved = await user_service.get(users[1].id)
 
         assert isinstance(retrieved, User)
         assert retrieved.id == users[1].id
 
     async def test_update(self, db: AsyncSession, user_service: UserService) -> None:
-        users = await UserFactory.create_batch(2)
+        users = await UserFactory.create_batch_async(2)
         new_username = 'new_username'
         user_data = UserUpdate(username=new_username)
 
