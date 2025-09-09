@@ -7,8 +7,8 @@ from app.core.db import BaseModel, SoftDeleteMixin
 
 
 class UserStatus(Enum):
-    ACTIVE: int = 1
-    INACTIVE: int = 2
+    ACTIVE = 1
+    INACTIVE = 2
 
 
 class User(BaseModel, SoftDeleteMixin):
