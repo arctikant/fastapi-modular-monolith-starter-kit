@@ -14,7 +14,7 @@ class UserStatus(Enum):
 class User(BaseModel, SoftDeleteMixin):
     __tablename__ = 'auth_users'
 
-    id: Mapped[int] = mapped_column(primary_key=True, index=True)
+    id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(String(64), index=True, unique=True)
     email: Mapped[str] = mapped_column(String(120), index=True, unique=True)
     password_hash: Mapped[str | None] = mapped_column(String(256))

@@ -560,7 +560,7 @@ Auth module implements basic authorization/authentication logic based on JWT tok
 
 **Create Alembic migrations locally**
 
-- `docker compose exec app alembic revision --autogenerate -m "create some table."`
+- `docker compose exec web alembic revision --autogenerate -m "create some table."`
 
 ### Static code analyzers, linters and formatters
 
@@ -607,12 +607,12 @@ Auth module implements basic authorization/authentication logic based on JWT tok
 
 **pytest**
 
-- `docker compose exec app pytest` to run all tests.
-- `docker compose exec app pytest -v -s` to run tests with extended info and stdout.
-- `docker compose exec app pytest tests/auth/unit/repositories/test_user.py` to run tests from specific file.
+- `docker compose exec web pytest` to run all tests.
+- `docker compose exec web pytest -v -s` to run tests with extended info and stdout.
+- `docker compose exec web pytest tests/auth/unit/repositories/test_user.py` to run tests from specific file.
 
 **Coverage**
 
-- `docker compose exec app coverage run -m pytest` to run tests with coverage.
-- `docker compose exec app coverage report` to generate coverage report.
-- `docker compose exec app coverage html` to generate more detailed HTML report.
+- `docker compose exec web coverage run -m pytest` to run tests with coverage.
+- `docker compose exec web coverage report` to generate coverage report.
+- `docker compose exec web coverage html` to generate more detailed HTML report.
