@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import security
 from app.auth.config import auth_config
+from app.auth.dependencies.repositories import get_refresh_token_repository, get_user_repository
 from app.auth.emails.templates import PasswordReset, UserRegistration
 from app.auth.events import UserCreated
 from app.auth.exceptions import ActionNotAllowed, InvalidInput
@@ -32,8 +33,13 @@ class TestAuthService:
         return Mock()
 
     @pytest.fixture
-    def auth_service(self, db: AsyncSession, mock_mail_service: AsyncMock, mock_event_service: Mock) -> AuthService:
-        return AuthService(db=db, mail=mock_mail_service, events=mock_event_service)
+    def auth_service(self, db: AsyncSession, mock_mail_service: AsyncMock, mock_event_service: Mock,) -> AuthService:
+        return AuthService(
+            user_repo=get_user_repository(db),
+            refresh_token_repo=get_refresh_token_repository(db),
+            mail=mock_mail_service,
+            events=mock_event_service,
+        )
 
     @pytest.fixture(autouse=True)
     def init_factories(self, db: AsyncSession) -> None:
@@ -160,7 +166,7 @@ class TestAuthService:
             await auth_service.restore_password(user.email)
 
         await db.execute(update(User).where(User.id == user.id).values(status_id=UserStatus.ACTIVE.value))
-        await auth_service._user_repository.delete(db=db, model_id=user.id)
+        await auth_service._user_repo.delete(user.id)
         await db.commit()
 
         with pytest.raises(InvalidInput, match="Can't restore account with this email"):
@@ -211,8 +217,8 @@ class TestAuthService:
             with pytest.raises(InvalidInput, match='Invalid access token'):
                 await auth_service.get_user_by_access_token(token_group.access_token)
 
-        await auth_service._user_repository.delete(db=db, model_id=user.id)
-        await auth_service._user_repository.commit(db)
+        await auth_service._user_repo.delete(user.id)
+        await auth_service._user_repo.commit()
 
         with pytest.raises(InvalidInput, match='Invalid access token'):
             await auth_service.get_user_by_access_token(token_group.access_token)

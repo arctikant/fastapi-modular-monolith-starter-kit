@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends
 
-from app.auth.deps import ActiveUserModel, UserService
+from app.auth.dependencies.services import ActiveUserModel, UserService
 from app.auth.schemas.user import UserResponse, UserUpdate, UserUpdateRequest
 from app.core.api import ConfigurableRateLimiter, Response
 

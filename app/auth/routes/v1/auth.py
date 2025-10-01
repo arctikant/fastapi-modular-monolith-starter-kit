@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.auth.deps import AuthService
+from app.auth.dependencies.services import AuthService
 from app.auth.exceptions import InvalidInput
 from app.auth.schemas.token import RefreshTokenRequest, TokenGroupResponse
 from app.auth.schemas.user import (

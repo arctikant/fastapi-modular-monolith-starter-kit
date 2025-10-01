@@ -56,47 +56,49 @@ UpdateSchemaType = TypeVar('UpdateSchemaType', bound=BaseSchema)
 
 
 class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
-    def __init__(self, model: type[ModelType]):
-        self.model = model
+    def __init__(self, db: AsyncSession, model: type[ModelType]):
+        self._db = db
+        self._model = model
 
-    async def get(self, db: AsyncSession, model_id: str | int, with_deleted: bool = False) -> ModelType | None:
+    async def get(self, model_id: str | int, with_deleted: bool = False) -> ModelType | None:
         if self._is_soft_deletable() and not with_deleted:
-            result = await db.execute(self.model.select_not_deleted().where(self.model.id == model_id))  # type: ignore
+            result = await self._db.execute(self._model.select_not_deleted().where(self._model.id == model_id))  # type: ignore
             return result.scalars().first()
         else:
-            return await db.get(self.model, model_id)
+            return await self._db.get(self._model, model_id)
 
     async def get_list(
-        self, db: AsyncSession, params: ListParams, schema: type[BaseSchema] | None = None, with_deleted: bool = False
+            self,
+            params: ListParams,
+            schema: type[BaseSchema] | None = None,
+            with_deleted: bool = False,
     ) -> PaginatedResult:
         if self._is_soft_deletable() and not with_deleted:
-            query = self.model.select_not_deleted()  # type: ignore
+            query = self._model.select_not_deleted()  # type: ignore
         else:
-            query = select(self.model)
+            query = select(self._model)
 
         query = self._filter(query=query, params=params)
         query = self._sort(query=query, params=params)
 
-        return await self._paginate(db=db, query=query, params=params, schema=schema)
+        return await self._paginate(query=query, params=params, schema=schema)
 
-    async def create(self, db: AsyncSession, data: CreateSchemaType) -> ModelType:
-        model = self.model(**data.model_dump(exclude_unset=True, exclude_none=True))
-        db.add(model)
+    async def create(self, data: CreateSchemaType) -> ModelType:
+        model = self._model(**data.model_dump(exclude_unset=True, exclude_none=True))
+        self._db.add(model)
 
         return model
 
-    async def update(self, db: AsyncSession, model: ModelType, data: UpdateSchemaType) -> ModelType:
+    async def update(self, model: ModelType, data: UpdateSchemaType) -> ModelType:
         update_data = data if isinstance(data, dict) else data.model_dump(exclude_unset=True, exclude_none=True)
         model.update(update_data)
-        db.add(model)
+        self._db.add(model)
 
         return model
 
-    async def delete(
-        self, db: AsyncSession, model_id: int | None = None, model: ModelType | None = None, is_soft: bool = True
-    ) -> None:
+    async def delete(self, model_id: int | None = None, model: ModelType | None = None, is_soft: bool = True) -> None:
         if model is None and model_id is not None:
-            model = await self.get(db, model_id, not is_soft)
+            model = await self.get(model_id, not is_soft)
 
         if not model:
             return None
@@ -104,16 +106,19 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if is_soft and self._is_soft_deletable():
             model.soft_delete()  # type: ignore
         else:
-            await db.delete(model)
+            await self._db.delete(model)
 
-    async def delete_all(self, db: AsyncSession, model_ids: list[int]) -> None:
-        await db.execute(delete(self.model).where(self.model.id.in_(model_ids)))  # type: ignore
+    async def delete_all(self, model_ids: list[int]) -> None:
+        await self._db.execute(delete(self._model).where(self._model.id.in_(model_ids)))  # type: ignore
 
-    async def commit(self, db: AsyncSession) -> None:
+    async def flush(self) -> None:
+        await self._db.flush()
+
+    async def commit(self) -> None:
         try:
-            await db.commit()
+            await self._db.commit()
         except SQLAlchemyError:
-            await db.rollback()
+            await self._db.rollback()
             await get_log_service().a_exception('database_error')
             raise DatabaseException('Database error occurred')
 
@@ -121,27 +126,30 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         if params.filters:
             for item in params.filters:
                 if isinstance(item.value, list):
-                    query = query.where(getattr(self.model, item.field).in_(item.value))
+                    query = query.where(getattr(self._model, item.field).in_(item.value))
                 else:
-                    query = query.where(getattr(self.model, item.field) == item.value)  # type: ignore
+                    query = query.where(getattr(self._model, item.field) == item.value)  # type: ignore
 
         return query
 
     def _sort(self, query: Select, params: ListParams) -> Select:
         if params.sort:
             for item in params.sort:
-                column = getattr(self.model, item.field)
+                column = getattr(self._model, item.field)
                 query = query.order_by(column.desc() if item.order == SortOrder.desc else column)
 
         return query
 
     async def _paginate(
-        self, db: AsyncSession, query: Select, params: ListParams, schema: type[BaseSchema] | None = None
+            self,
+            query: Select,
+            params: ListParams,
+            schema: type[BaseSchema] | None = None,
     ) -> PaginatedResult[BaseSchema]:
-        total = await db.scalar(select(func.count()).select_from(query.subquery()))
+        total = await self._db.scalar(select(func.count()).select_from(query.subquery()))
 
         query = query.offset((params.page - 1) * params.per_page).limit(params.per_page)
-        result = await db.execute(query)
+        result = await self._db.execute(query)
 
         items = result.scalars().all()
         if schema:
@@ -153,4 +161,4 @@ class BaseRepository(Generic[ModelType, CreateSchemaType, UpdateSchemaType]):
         )
 
     def _is_soft_deletable(self) -> bool:
-        return issubclass(self.model, SoftDeleteMixin)
+        return issubclass(self._model, SoftDeleteMixin)

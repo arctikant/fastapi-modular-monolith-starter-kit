@@ -17,9 +17,9 @@ from tests.factories.user import UserFactory
 class TestRefreshTokenRepository:
     # Fixtures
 
-    @pytest.fixture(scope='class')
-    def repo(self) -> RefreshTokenRepository:
-        return RefreshTokenRepository(RefreshToken)
+    @pytest.fixture
+    def repo(self, db: AsyncSession) -> RefreshTokenRepository:
+        return RefreshTokenRepository(db=db, model=RefreshToken)
 
     @pytest.fixture(autouse=True)
     def init_factories(self, db: AsyncSession) -> None:
@@ -37,8 +37,8 @@ class TestRefreshTokenRepository:
             user_id=user.id,
             expires_at=datetime.now(UTC) + timedelta(days=1),
         )
-        await repo.upsert(db=db, data=insert_data)
-        await repo.commit(db)
+        await repo.upsert(insert_data)
+        await repo.commit()
 
         inserted = await db.get(RefreshToken, insert_data.token[:24])
 
@@ -54,8 +54,8 @@ class TestRefreshTokenRepository:
             user_id=user.id,
             expires_at=datetime.now(UTC) + timedelta(days=3),
         )
-        await repo.upsert(db=db, data=update_data, model=inserted)
-        await repo.commit(db)
+        await repo.upsert(data=update_data, model=inserted)
+        await repo.commit()
 
         result = await db.execute(select(RefreshToken).where(RefreshToken.user_id == user.id))  # type: ignore
         updated = result.scalars().all()
@@ -70,7 +70,7 @@ class TestRefreshTokenRepository:
     async def test_get_with_user(self, db: AsyncSession, repo: RefreshTokenRepository) -> None:
         refresh_token = await RefreshTokenFactory.create(user=await UserFactory.create())
 
-        retrieved = await repo.get_with_user(db=db, token=refresh_token.token)
+        retrieved = await repo.get_with_user(refresh_token.token)
 
         assert retrieved
         assert isinstance(retrieved.user, User)
@@ -84,7 +84,7 @@ class TestRefreshTokenRepository:
         )  # type: ignore
         assert result.scalar_one() == 1
 
-        await repo.delete_by_user_id(db=db, user_id=refresh_token.user_id)
+        await repo.delete_by_user_id(refresh_token.user_id)
 
         result = await db.execute(
             select(count()).select_from(RefreshToken).where(RefreshToken.user_id == refresh_token.user_id)

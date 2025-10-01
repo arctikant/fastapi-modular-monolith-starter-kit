@@ -1,7 +1,6 @@
 from datetime import UTC, datetime, timedelta
 
 from jwt import InvalidTokenError
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.auth import security
 from app.auth.config import auth_config
@@ -10,8 +9,8 @@ from app.auth.events import UserCreated
 from app.auth.exceptions import ActionNotAllowed, InvalidInput
 from app.auth.models.refresh_token import RefreshToken
 from app.auth.models.user import User
-from app.auth.repositories.refresh_token import refresh_token_repository
-from app.auth.repositories.user import user_repository
+from app.auth.repositories.refresh_token import RefreshTokenRepository
+from app.auth.repositories.user import UserRepository
 from app.auth.schemas.token import RefreshTokenBase, TokenGroup
 from app.auth.schemas.user import UserCreate, UserUpdate
 from app.core.configs import app_config
@@ -21,15 +20,20 @@ from app.core.services.mail import EmailData, MailServiceInterface
 
 
 class AuthService:
-    def __init__(self, db: AsyncSession, mail: MailServiceInterface, events: EventsServiceInterface) -> None:
-        self._db = db
+    def __init__(
+            self,
+            user_repo: UserRepository,
+            refresh_token_repo: RefreshTokenRepository,
+            mail: MailServiceInterface,
+            events: EventsServiceInterface,
+    ) -> None:
         self._mail = mail
         self._events = events
-        self._user_repository = user_repository
-        self._refresh_token_repository = refresh_token_repository
+        self._user_repo = user_repo
+        self._refresh_token_repo = refresh_token_repo
 
     async def generate_token(self, email: str, password: str) -> TokenGroup:
-        user = await self._user_repository.authenticate(db=self._db, email=email, password=password)
+        user = await self._user_repo.authenticate(email=email, password=password)
         if not user or not user.is_active():
             raise InvalidInput('Invalid email or password')
 
@@ -45,7 +49,7 @@ class AuthService:
         # IMPROVEMENTS:
         # Implement refresh token families to improve security
         # Store refresh_token in cookie with HttpOnly flag if you have your SPA on subdomain for better security
-        token = await self._refresh_token_repository.get_with_user(db=self._db, token=refresh_token)
+        token = await self._refresh_token_repo.get_with_user(token=refresh_token)
         if (
             not token
             or not token.user
@@ -69,13 +73,13 @@ class AuthService:
         if not auth_config.USER_REGISTRATION_ALLOWED:
             raise ActionNotAllowed('User registration is not allowed on this server')
 
-        user = await self._user_repository.get_by_email(db=self._db, email=user_data.email)
+        user = await self._user_repo.get_by_email(user_data.email)
         if user:
             raise InvalidInput("Can't register user with this credentials")
 
         try:
-            user = await self._user_repository.create(db=self._db, data=user_data)
-            await self._user_repository.commit(db=self._db)
+            user = await self._user_repo.create(user_data)
+            await self._user_repo.commit()
         except DatabaseException:
             raise InvalidInput("Can't register user with this credentials")
 
@@ -90,7 +94,7 @@ class AuthService:
         return user
 
     async def restore_password(self, email: str) -> None:
-        user = await self._user_repository.get_by_email(self._db, email)
+        user = await self._user_repo.get_by_email(email)
 
         if not user or not user.is_active():
             raise InvalidInput("Can't restore account with this email")
@@ -115,13 +119,13 @@ class AuthService:
         if not token_data.sub:
             raise InvalidInput('Invalid password reset token')
 
-        user = await self._user_repository.get_by_email(db=self._db, email=token_data.sub)
+        user = await self._user_repo.get_by_email(token_data.sub)
 
         if not user or not user.is_active():
             raise InvalidInput('Invalid password reset token')
 
-        await self._user_repository.update(db=self._db, model=user, data=UserUpdate(password=password))
-        await self._user_repository.commit(db=self._db)
+        await self._user_repo.update(model=user, data=UserUpdate(password=password))
+        await self._user_repo.commit()
 
     async def get_user_by_access_token(self, token: str) -> User:
         try:
@@ -132,7 +136,7 @@ class AuthService:
         if token_data.sub is None:
             raise InvalidInput('Invalid access token')
 
-        user = await self._user_repository.get(self._db, token_data.sub)
+        user = await self._user_repo.get(token_data.sub)
         if not user:
             raise InvalidInput('Invalid access token')
 
@@ -145,7 +149,7 @@ class AuthService:
             expires_at=datetime.now(UTC) + timedelta(days=auth_config.REFRESH_TOKEN_EXPIRE_DAYS),
         )
 
-        await self._refresh_token_repository.upsert(db=self._db, model=token, data=refresh_token)
-        await self._refresh_token_repository.commit(db=self._db)
+        await self._refresh_token_repo.upsert(model=token, data=refresh_token)
+        await self._refresh_token_repo.commit()
 
         return refresh_token

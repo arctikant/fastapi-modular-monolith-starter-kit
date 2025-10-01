@@ -15,9 +15,9 @@ from tests.factories.user import UserFactory
 class TestUserRepository:
     # Fixtures
 
-    @pytest.fixture(scope='class')
-    def repo(self) -> UserRepository:
-        return UserRepository(User)
+    @pytest.fixture
+    def repo(self, db: AsyncSession) -> UserRepository:
+        return UserRepository(db=db, model=User)
 
     @pytest.fixture(autouse=True)
     def init_factories(self, db: AsyncSession) -> None:
@@ -28,7 +28,7 @@ class TestUserRepository:
     async def test_get_by_email(self, db: AsyncSession, repo: UserRepository) -> None:
         user = await UserFactory.create()
 
-        retrieved = await repo.get_by_email(db=db, email=user.email)
+        retrieved = await repo.get_by_email(user.email)
 
         assert retrieved
         assert retrieved.id == user.id
@@ -41,8 +41,8 @@ class TestUserRepository:
             username=faker.user_name(),
             password=faker.password(),
         )
-        await repo.create(db=db, data=user_data)
-        await repo.commit(db)
+        await repo.create(user_data)
+        await repo.commit()
 
         result = await db.execute(select(User).where(User.email == user_data.email))  # type: ignore
         created = result.scalars().first()
@@ -54,8 +54,8 @@ class TestUserRepository:
 
         # Can't create duplicate
         with pytest.raises(DatabaseException, match='Database error occurred'):
-            await repo.create(db=db, data=user_data)
-            await repo.commit(db)
+            await repo.create(user_data)
+            await repo.commit()
 
         result = await db.execute(select(count()).select_from(User).where(User.email == user_data.email))  # type: ignore
         assert result.scalar_one() == 1
@@ -69,8 +69,8 @@ class TestUserRepository:
             password=faker.password(),
             status_id=UserStatus.INACTIVE,
         )
-        await repo.update(db=db, model=user, data=user_data)
-        await repo.commit(db)
+        await repo.update(model=user, data=user_data)
+        await repo.commit()
 
         updated = await db.get(User, user.id)
 
@@ -86,17 +86,17 @@ class TestUserRepository:
         password = UserFactory.get_password()
 
         # Can authenticate
-        authenticated = await repo.authenticate(db=db, email=user.email, password=password)
+        authenticated = await repo.authenticate(email=user.email, password=password)
 
         assert authenticated
         assert authenticated.id == user.id
 
         # Can't authenticate with wrong password
-        not_authenticated = await repo.authenticate(db=db, email=user.email, password=faker.password())
+        not_authenticated = await repo.authenticate(email=user.email, password=faker.password())
 
         assert not_authenticated is None
 
         # Can't authenticate with not existing email
-        not_found = await repo.authenticate(db=db, email=faker.email(), password=password)
+        not_found = await repo.authenticate(email=faker.email(), password=password)
 
         assert not_found is None

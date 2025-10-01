@@ -5,6 +5,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.sql.functions import count
 
+from app.auth.dependencies.repositories import get_refresh_token_repository, get_user_repository
 from app.auth.exceptions import InvalidInput
 from app.auth.models.refresh_token import RefreshToken
 from app.auth.models.user import User
@@ -24,7 +25,11 @@ class TestUserService:
 
     @pytest.fixture
     def user_service(self, db: AsyncSession, mock_event_service: Mock) -> UserService:
-        return UserService(db=db, events=mock_event_service)
+        return UserService(
+            user_repo=get_user_repository(db),
+            refresh_token_repo=get_refresh_token_repository(db),
+            events=mock_event_service,
+        )
 
     @pytest.fixture(autouse=True)
     def init_factories(self, db: AsyncSession) -> None:

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
 
-from app.auth.deps import ActiveUserGetter, UserService
+from app.auth.dependencies.services import ActiveUserGetter, UserService
 from app.auth.schemas.user import (
     UserFilterParam,
     UserListParams,

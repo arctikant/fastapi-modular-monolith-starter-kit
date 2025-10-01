@@ -4,6 +4,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 
+from app.auth.dependencies.repositories import RefreshTokenRepo, UserRepo
 from app.auth.exceptions import InvalidInput
 from app.auth.gateway import AuthGateway as AuthGatewayClass
 from app.auth.gateway import AuthGatewayInterface
@@ -12,17 +13,26 @@ from app.auth.schemas.user import UserDTO
 from app.auth.services.auth import AuthService as AuthServiceClass
 from app.auth.services.user import UserService as UserServiceClass
 from app.core.configs import app_config
-from app.core.deps import DBSession, EventsService, MailService
+from app.core.deps import EventsService, MailService
 
 reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=f'{app_config.API_V1_STR}/auth/access-token')
 
 
-async def get_auth_service(db: DBSession, mail: MailService, events: EventsService) -> AuthServiceClass:
-    return AuthServiceClass(db=db, mail=mail, events=events)
+async def get_auth_service(
+        user_repo: UserRepo,
+        refresh_token_repo: RefreshTokenRepo,
+        mail: MailService,
+        events: EventsService,
+) -> AuthServiceClass:
+    return AuthServiceClass(user_repo=user_repo, refresh_token_repo=refresh_token_repo, mail=mail, events=events)
 
 
-async def get_user_service(db: DBSession, events: EventsService) -> UserServiceClass:
-    return UserServiceClass(db=db, events=events)
+async def get_user_service(
+        user_repo: UserRepo,
+        refresh_token_repo: RefreshTokenRepo,
+        events: EventsService,
+) -> UserServiceClass:
+    return UserServiceClass(user_repo=user_repo, refresh_token_repo=refresh_token_repo, events=events)
 
 
 async def get_gateway(user_service: Annotated[UserServiceClass, Depends(get_user_service)]) -> AuthGatewayInterface:
