@@ -1,15 +1,15 @@
 import asyncio
 
-from app.auth import UserRepo
 from app.auth.config import auth_config
 from app.auth.dependencies.repositories import get_user_repository
 from app.auth.models.user import UserStatus
+from app.auth.repositories.user import UserRepository
 from app.auth.schemas.user import UserCreate
 from app.core.db import get_session
 from app.core.deps import logger
 
 
-async def create_first_user(user_repo: UserRepo) -> None:
+async def create_first_user(user_repo: UserRepository) -> None:
     user = await user_repo.get_by_email(auth_config.FIRST_USER_EMAIL)
     if not user:
         user_data = UserCreate(

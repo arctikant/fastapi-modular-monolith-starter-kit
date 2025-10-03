@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi import status as http_status
 
-from app.auth.dependencies.services import ActiveUserGetter, UserService
+from app.auth.dependencies.services import ActiveUserGetter, UserServiceDep
 from app.auth.schemas.user import (
     UserFilterParam,
     UserListParams,
@@ -28,7 +28,7 @@ list_params_builder = ListParamsBuilder(UserListParams, UserSortParam, UserFilte
 
 @router.get('')
 async def get_list(
-    user_service: UserService, request: UserListParams = Depends(list_params_builder)
+    user_service: UserServiceDep, request: UserListParams = Depends(list_params_builder)
 ) -> PaginatedResponse[list[UserResponse]]:
     users = await user_service.get_list(request, UserResponse)
 
@@ -36,7 +36,7 @@ async def get_list(
 
 
 @router.get('/{user_id}')
-async def get(user_id: int, user_service: UserService) -> Response[UserResponse]:
+async def get(user_id: int, user_service: UserServiceDep) -> Response[UserResponse]:
     user = await user_service.get(user_id)
 
     if user is None:

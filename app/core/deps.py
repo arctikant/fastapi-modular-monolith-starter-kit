@@ -25,11 +25,11 @@ logger = get_log_service()
 
 # Dependencies
 
-DBSession = Annotated[AsyncSession, Depends(get_session)]
-QueueService = Annotated[QueueServiceInterface, Depends(get_queue_service)]
-MailService = Annotated[MailServiceInterface, Depends(get_mail_service)]
-CacheService = Annotated[CacheServiceInterface, Depends(get_cache_service)]
-EventsService = Annotated[EventsServiceInterface, Depends(get_events_service)]
+DBSessionDep = Annotated[AsyncSession, Depends(get_session)]
+QueueServiceDep = Annotated[QueueServiceInterface, Depends(get_queue_service)]
+MailServiceDep = Annotated[MailServiceInterface, Depends(get_mail_service)]
+CacheServiceDep = Annotated[CacheServiceInterface, Depends(get_cache_service)]
+EventsServiceDep = Annotated[EventsServiceInterface, Depends(get_events_service)]
 
 # Decorators
 

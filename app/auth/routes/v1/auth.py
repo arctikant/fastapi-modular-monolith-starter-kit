@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.auth.dependencies.services import AuthService
+from app.auth.dependencies.services import AuthServiceDep
 from app.auth.exceptions import InvalidInput
 from app.auth.schemas.token import RefreshTokenRequest, TokenGroupResponse
 from app.auth.schemas.user import (
@@ -20,7 +20,7 @@ router = APIRouter(dependencies=[Depends(ConfigurableRateLimiter(times=3, second
 
 @router.post('/login')
 async def login(
-    auth_service: AuthService, request: Annotated[OAuth2PasswordRequestForm, Depends()]
+    auth_service: AuthServiceDep, request: Annotated[OAuth2PasswordRequestForm, Depends()]
 ) -> Response[TokenGroupResponse]:
     try:
         token_group = await auth_service.generate_token(email=request.username, password=request.password)
@@ -31,7 +31,7 @@ async def login(
 
 
 @router.post('/refresh-token')
-async def refresh_token(request: RefreshTokenRequest, auth_service: AuthService) -> Response[TokenGroupResponse]:
+async def refresh_token(request: RefreshTokenRequest, auth_service: AuthServiceDep) -> Response[TokenGroupResponse]:
     try:
         token_group = await auth_service.refresh_token(refresh_token=request.refresh_token)
     except InvalidInput as e:
@@ -41,21 +41,21 @@ async def refresh_token(request: RefreshTokenRequest, auth_service: AuthService)
 
 
 @router.post('/register')
-async def register(request: UserCreateRequest, auth_service: AuthService) -> Response[UserResponse]:
+async def register(request: UserCreateRequest, auth_service: AuthServiceDep) -> Response[UserResponse]:
     user = await auth_service.register(UserCreate(**request.model_dump(exclude_none=True, exclude_unset=True)))
 
     return Response(data=user)
 
 
 @router.post('/restore-password')
-async def restore_password(request: PasswordRestoreRequest, auth_service: AuthService) -> Response:
+async def restore_password(request: PasswordRestoreRequest, auth_service: AuthServiceDep) -> Response:
     await auth_service.restore_password(request.email)
 
     return Response(message='Password recovery email successfully sent')
 
 
 @router.post('/reset-password')
-async def reset_password(request: PasswordResetRequest, auth_service: AuthService) -> Response:
+async def reset_password(request: PasswordResetRequest, auth_service: AuthServiceDep) -> Response:
     await auth_service.reset_password(request.token, request.password)
 
     return Response(message='Password successfully reset')

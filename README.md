@@ -30,7 +30,7 @@ The project emphasizes the modern approaches and best practices for creation of 
 - `app.core.db.BaseModel` - implements general model logic. All custom models should inherit it. `BaseModel` itself inherits from `sqlalchemy.orm.DeclarativeBase`.
 - `app.core.db.SoftDeleteMixin` - implements soft delete functionality. To add soft delete logic for your particular model you just need to inherit `SoftDeleteMixin`.
 - `app.core.db.BaseRepository` - implements general CRUD operations as well as list retrieval with sorting, filtering `app.core.db.ListParams` and pagination `app.core.db.PaginatedResult`.
-- `DBSession` form `app.core.deps dependency` should be used to retrieve `sqlalchemy.ext.asyncio.AsyncSession` from FastAPI DI system.
+- `DBSessionDep` form `app.core.deps dependency` should be used to retrieve `sqlalchemy.ext.asyncio.AsyncSession` from FastAPI DI system.
 - All models must be imported in `app/core/models.py`, so Alembic will be able to see and work with them.
 
 There is some violation of the interaction between the abstraction layers here, as `sqlalchemy.ext.asyncio.AsyncSession` is passed into services rather than being encapsulated in repositories as is often happens. This is done consciously and there are several reasons for this:
@@ -44,9 +44,9 @@ There is some violation of the interaction between the abstraction layers here, 
     ```python
     async def delete(self, user_id: int | None = None, user: User | None = None) -> None:
         ...
-        await self._refresh_token_repository.delete_by_user_id(db=self._db, user_id=user_id)
-        await self._user_repository.delete(db=self._db, model_id=user_id, model=user)
-        await self._user_repository.commit(db=self._db)
+        await self._refresh_token_repository.delete_by_user_id(user_id)
+        await self._user_repository.delete(model_id=user_id, model=user)
+        await self._user_repository.commit()
         ...
     ```
     
@@ -328,10 +328,10 @@ class ListenedEvent:
 To dispatch the Event we should use `EventsService` :
 
 ```python
-from app.core.deps import EventsService
+from app.core.deps import EventsServiceDep
 
 @router.get('/')
-async def index(events_service: EventsService) -> Response:
+async def index(events_service: EventsServiceDep) -> Response:
     ...
     events_service.dispatch(UserCreated(**user.to_dict()))
     ...
@@ -363,10 +363,10 @@ async def get(item_id: int):
 As well as any arbitrary data:
 
 ```python
-from app.core.deps import CacheService
+from app.core.deps import CacheServiceDep
 
 @router.get('/')
-async def index(cache_service: CacheService) -> Response:
+async def index(cache_service: CacheServiceDep) -> Response:
     ...
     cache_service.set(key='key', value='value', ttl=60)
     ...
@@ -411,10 +411,10 @@ class SendEmail(BaseTask):
 To send it to the queue we should use `QueueService`:
 
 ```python
-from app.core.deps import QueueService
+from app.core.deps import QueueServiceDep
 
 @router.get('/')
-async def index(queue_service: QueueService) -> Response:
+async def index(queue_service: QueueServiceDep) -> Response:
     ...
     await queue_service.push(
         task=SendEmail,  
@@ -467,10 +467,10 @@ To send an email we should use `MailService`:
 
 ```python
 from app.core.services.mail import EmailData
-from app.core.deps import MailService
+from app.core.deps import MailServiceDep
 
 @router.get('/')
-async def index(mail_service: MailService) -> Response:
+async def index(mail_service: MailServiceDep) -> Response:
     ...
     email_data = EmailData(subject='Successful registration', recipient=user.email)
     template = UserRegistration(username=user.username, project_name=app_config.PROJECT_NAME)

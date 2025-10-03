@@ -4,7 +4,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from pydantic import BaseModel
 
-from app.auth.dependencies.repositories import RefreshTokenRepo, UserRepo
+from app.auth.dependencies.repositories import RefreshTokenRepoDep, UserRepoDep
 from app.auth.exceptions import InvalidInput
 from app.auth.gateway import AuthGateway as AuthGatewayClass
 from app.auth.gateway import AuthGatewayInterface
@@ -13,24 +13,24 @@ from app.auth.schemas.user import UserDTO
 from app.auth.services.auth import AuthService as AuthServiceClass
 from app.auth.services.user import UserService as UserServiceClass
 from app.core.configs import app_config
-from app.core.deps import EventsService, MailService
+from app.core.deps import EventsServiceDep, MailServiceDep
 
 reusable_oauth2 = OAuth2PasswordBearer(tokenUrl=f'{app_config.API_V1_STR}/auth/access-token')
 
 
 async def get_auth_service(
-        user_repo: UserRepo,
-        refresh_token_repo: RefreshTokenRepo,
-        mail: MailService,
-        events: EventsService,
+        user_repo: UserRepoDep,
+        refresh_token_repo: RefreshTokenRepoDep,
+        mail: MailServiceDep,
+        events: EventsServiceDep,
 ) -> AuthServiceClass:
     return AuthServiceClass(user_repo=user_repo, refresh_token_repo=refresh_token_repo, mail=mail, events=events)
 
 
 async def get_user_service(
-        user_repo: UserRepo,
-        refresh_token_repo: RefreshTokenRepo,
-        events: EventsService,
+        user_repo: UserRepoDep,
+        refresh_token_repo: RefreshTokenRepoDep,
+        events: EventsServiceDep,
 ) -> UserServiceClass:
     return UserServiceClass(user_repo=user_repo, refresh_token_repo=refresh_token_repo, events=events)
 
@@ -75,10 +75,10 @@ class ActiveUserGetter:
         return self._schema(**user.to_dict()) if self._schema else user
 
 
-AuthService = Annotated[AuthServiceClass, Depends(get_auth_service)]
-UserService = Annotated[UserServiceClass, Depends(get_user_service)]
-CurrentUserModel = Annotated[User, Depends(CurrentUserGetter())]
-ActiveUserModel = Annotated[User, Depends(ActiveUserGetter())]
+AuthServiceDep = Annotated[AuthServiceClass, Depends(get_auth_service)]
+UserServiceDep = Annotated[UserServiceClass, Depends(get_user_service)]
+CurrentUserDep = Annotated[User, Depends(CurrentUserGetter())]
+ActiveUserDep = Annotated[User, Depends(ActiveUserGetter())]
 
 # External
 

@@ -1,4 +1,3 @@
-from app.auth.dependencies.repositories import UserRepo
 from app.auth.dependencies.services import ActiveUser, AuthGateway, CurrentUser
 from app.auth.events import UserCreated, UserDeleted
 from app.auth.routers import router_v1
@@ -9,7 +8,6 @@ __all__ = [
     'CurrentUser',
     'ActiveUser',
     'AuthGateway',
-    'UserRepo',
     'UserDTO',
     'UserCreated',
     'UserDeleted',
